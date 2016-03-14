@@ -219,15 +219,15 @@ else
       recur_entries.each do |recur|
         schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
         if make_schedule( schedstr ).occurs_on?(Date.today)
-          puts "**************** Recur matches today: #{schedstr} --- #{taskstr}"
+          puts "- Recur matches today: #{schedstr} --- #{taskstr}"
           task = TodoTxt::Task.parse(taskstr)
           task[:created_at] = DateTime.now
           found_task = todo_list.select { |t| t.text == task.text }.first
           if found_task
-            puts "******************** Duplicate task exists: #{found_task.text}"
+            puts "    - Duplicate task exists: #{found_task.text}"
           else
-            puts "******************** No duplicate found for #{taskstr}"
-            puts "**** Adding #{taskstr}"
+            puts "    -  No duplicate found for #{taskstr}"
+            puts "    -  Adding #{taskstr}"
 
             todo_list << task
             todo_fh.rewind
