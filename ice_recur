@@ -120,6 +120,8 @@ def tapprint( bool, text )
   $tapnum += 1
 end
 
+recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
+
 if opts[:test]
   curmodays=Date.new(Time.now.year, Time.now.month, -1).day
 
@@ -194,7 +196,6 @@ if opts[:test]
         "#{tstring} includes a different set of days" )
 
 elsif opts[:show_next]
-  recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
   recur_entries = File.read(recur_file).split("\n").reject { |e| e =~ %r{^#} }
 
   recur_entries.each do |recur|
@@ -202,10 +203,13 @@ elsif opts[:show_next]
     puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence.strftime("%Y-%m-%d")} -- Text: #{taskstr}"
   end
 else
-  # Generate entries
-
-  recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
-  recur_entries = File.read(recur_file).split("\n").reject { |e| e =~ %r{^#} }
+  # Get our recur entries
+  # Drop everything that looks like a comment or blank
+  recur_entries = File.read(recur_file).split("\n").reject { |e| e =~ %r{(^\s*#|^\s*$)} }
+  bad_entries = recur_entries.reject { |e| e =~ %r{^(@[0-9-]+ )?[A-Za-z;0-9\s]+ - } }
+  if bad_entries.length > 0
+    raise "Bad entries found in #{recur_file}: \n#{bad_entries.join("\n")}"
+  end
 
   # Make a backup
   todo_file = File.join(ENV['TODO_DIR'], 'todo.txt')
