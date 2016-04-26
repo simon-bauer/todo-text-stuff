@@ -4,7 +4,7 @@ require 'ice_cube'
 require 'todotxt'   # https://github.com/tylerdooling/todotxt-rb ; gem install todotxt-rb
 require 'trollop'
 
-$VERSION='1.0'
+$VERSION='1.1'
 
 opts = Trollop::options do
   version "ice_cube v1.0 by Robin Lee Powell, MIT license.  Some code taken from https://github.com/chuckbjones/todo.txt-cli-addons/blob/master/recur , license unknown"
@@ -50,6 +50,11 @@ opts = Trollop::options do
 
   The code just calls IceCube::Rule methods using whatever you specify.
 
+  Checking The Run
+  ----------------
+
+  Run "todo ice_recur check" to check if ice_recur has run to completion in the last 2 days.  Pass an email address as an argument; if the check fails, it'll send email to that address.
+
   Examples
   --------
 
@@ -68,6 +73,7 @@ opts = Trollop::options do
 EOS
 
   opt :test, "Run tests on the recurrence code."
+  opt :check, "Check the completion file to see if ice_recur has actually run in the last two days.  Takes an email address to complain to if not as argument.", :type => String
   opt :show_next, "Instead of generating entries, show the next date that each entry *would* run."
 end
 
@@ -121,6 +127,7 @@ def tapprint( bool, text )
 end
 
 recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
+completed_file = File.join(ENV['TODO_DIR'], '.ice_recur_completed')
 
 if opts[:test]
   curmodays=Date.new(Time.now.year, Time.now.month, -1).day
@@ -202,6 +209,30 @@ elsif opts[:show_next]
     schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
     puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence.strftime("%Y-%m-%d")} -- Text: #{taskstr}"
   end
+elsif opts[:check]
+  email = opts[:check]
+
+  send_mail = false
+  e = nil
+  begin
+    if Time.now.to_i - File.mtime(completed_file).to_i > 172800
+      send_mail = true
+    end
+  rescue => e
+    send_mail = true
+  end
+
+  if e
+    puts e
+    puts e.backtrace
+  end
+
+  if send_mail
+    print "Sending email.\n"
+    print %x{echo "File #{completed_file} is more than two days old, or something else weird happened.\n" | mailx -s 'ERROR: ice_recur has not run in 2 days!' #{email}}
+  else
+    print "File #{completed_file} has been touched recently; looks good.\n"
+  end
 else
   # Get our recur entries
   # Drop everything that looks like a comment or blank
@@ -251,4 +282,8 @@ else
     end
     exit 1
   end
+
+  # Mark the "we've actually run" file
+  require 'fileutils'
+  FileUtils.touch completed_file
 end
