@@ -257,7 +257,7 @@ else
           puts "- Recur matches today: #{schedstr} --- #{taskstr}"
           task = TodoTxt::Task.parse(taskstr)
           task[:created_at] = DateTime.now
-          found_task = todo_list.select { |t| t.text == task.text }.first
+          found_task = todo_list.select { |t| t.text == task.text && ! t.completed? }.first
           if found_task
             puts "    - Duplicate task exists: #{found_task.text}"
           else
