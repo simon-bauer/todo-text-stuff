@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# This script is intended to be run out of cron.  The goal is to
+# make todo.txt style checklists for repeated, one-off throwaway use,
+# i.e. I have a checklist for all the stuff I need to take with me
+# when my kids and I go swimming.
+#
+# It takes two arguments: a source directory, which should contain
+# some blank checklists, and a destination directory, which should
+# get filled with fresh copies of each checklist if and only if the
+# target file has not been modified in the last 3 hours.
+#
+# In other words, there should always be a fresh copy of the
+# checklist in the destination dir, but it should never be stomped on
+# while you're actually using it.
+
+# Time in minutes to let the user work on the checklist
+fmin=240
+sourcedir=$1
+if [[ ! -d $sourcedir ]]
+then
+  echo "First argument should be the template directory."
+  exit 1
+fi
+
+destdir=$2
+if [[ ! -d $destdir ]]
+then
+  echo "Second argument should be the destination directory."
+  exit 1
+fi
+
+for file in $(find $sourcedir -type f)
+do
+  echo "- Considering $file"
+  fname=$(basename $file)
+  destf=$destdir/$fname
+  if [[ -f $destf ]]
+  then
+    echo "  - Found $destf ; checking activity"
+    if [[ $(find $destf -mmin -$fmin -type f | grep "^$destf$") ]]
+    then
+      echo "  - $destf has been modified too recently ; leaving alone"
+    else
+      echo "  - $destf has been modified more than $fmin minutes ago ; replacing"
+      cp $file $destf
+    fi
+  else
+    echo "  - No file $destdir/$fname ; copying from $file"
+    cp $file $destf
+  fi
+done
