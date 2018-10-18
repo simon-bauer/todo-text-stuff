@@ -1,0 +1,142 @@
+require 'ice_cube'
+require 'todotxt'   # https://github.com/tylerdooling/todotxt-rb ; gem install todotxt-rb
+
+
+def make_schedule( rulestr )
+  # Get the start date, if any
+  startdate = Time.now.to_date
+  if rulestr =~ %r{^\s*@}
+    startdate = Date.parse(rulestr.sub(%r{^\s*@(\S+)\s.*},'\1'))
+    rulestr = rulestr.dup.sub!(%r{^\s*@\S+},'')
+  end
+
+  rule=IceCube::Rule
+  schedule = IceCube::Schedule.new(startdate.to_time)
+
+  rulestr.split(%r{\s;\s}).each do |rulebit|
+    method, argstr = rulebit.strip.split(%r{\s+}, 2)
+    method.downcase!
+
+    args = []
+
+    if argstr
+      args = argstr.strip.split(%r{\s*,\s*})
+
+      args.map! do |arg|
+        if arg =~ %r{day\s*$}
+          arg.downcase.to_sym
+        elsif arg =~ %r{[0-9]+}
+          arg = arg.to_i
+        else
+          arg
+        end
+      end
+    end
+
+    rule = rule.send(method, *args)
+  end
+
+  schedule.add_recurrence_rule rule
+
+  return schedule
+end
+
+
+class Ice_recur_lib
+
+    def initialize()
+        @recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
+        @completed_file = File.join(ENV['TODO_DIR'], '.ice_recur_completed')
+    end
+
+    def show_next
+      recur_entries = File.read(@recur_file).split("\n").reject { |e| e =~ %r{^#} }
+
+      recur_entries.each do |recur|
+        schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
+        puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence.strftime("%Y-%m-%d")} -- Text: #{taskstr}"
+      end
+    end
+
+    def check
+      email = opts[:check]
+
+      send_mail = false
+      e = nil
+      begin
+        if Time.now.to_i - File.mtime(@completed_file).to_i > 172800
+          send_mail = true
+        end
+      rescue => e
+        send_mail = true
+      end
+
+      if e
+        puts e
+        puts e.backtrace
+      end
+
+      if send_mail
+        print "Sending email.\n"
+        print %x{echo "File #{@completed_file} is more than two days old, or something else weird happened.\n" | mailx -s 'ERROR: ice_recur has not run in 2 days!' #{email}}
+      else
+        print "File #{@completed_file} has been touched recently; looks good.\n"
+      end
+    end
+
+    def default
+      # Get our recur entries
+      # Drop everything that looks like a comment or blank
+      recur_entries = File.read(@recur_file).split("\n").reject { |e| e =~ %r{(^\s*#|^\s*$)} }
+      bad_entries = recur_entries.reject { |e| e =~ %r{^(@[0-9-]+ )?[A-Za-z;,_0-9\s]+ - } }
+      if bad_entries.length > 0
+        raise "Bad entries found in #{@recur_file}: \n#{bad_entries.join("\n")}"
+      end
+
+      # Make a backup
+      todo_file = File.join(ENV['TODO_DIR'], 'todo.txt')
+      orig_todo_data = File.read(todo_file)
+      orig_todo_time = File.mtime(todo_file).to_i
+
+      begin
+        File.open(todo_file, 'r+') do |todo_fh|
+          todo_list = TodoTxt::List.from_file(todo_fh)
+
+          recur_entries.each do |recur|
+            schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
+            if make_schedule( schedstr ).occurs_on?(Date.today)
+              puts "- Recur matches today: #{schedstr} --- #{taskstr}"
+              task = TodoTxt::Task.parse(taskstr)
+              task[:created_at] = DateTime.now
+              found_task = todo_list.select { |t| t.text == task.text && ! t.completed? }.first
+              if found_task
+                puts "    - Duplicate task exists: #{found_task.text}"
+              else
+                puts "    -  No duplicate found for #{taskstr}"
+                puts "    -  Adding #{taskstr}"
+
+                todo_list << task
+                todo_fh.rewind
+                todo_fh.truncate(todo_fh.pos)
+                todo_list.to_file(todo_fh)
+                todo_fh.write("\n")
+              end
+            end
+          end
+        end
+      rescue => e
+        if File.mtime(todo_file).to_i != orig_todo_time
+          puts "FAILURE: Something went wrong; reverting #{todo_file}: #{e}; #{e.backtrace.join("\n")}"
+          File.open(todo_file, 'w') { |file| file.puts orig_todo_data }
+        else
+          puts "FAILURE: Something went wrong: #{e}; #{e.backtrace.join("\n")}"
+        end
+        exit 1
+      end
+
+      # Mark the "we've actually run" file
+      require 'fileutils'
+      FileUtils.touch @completed_file
+    end
+
+end
