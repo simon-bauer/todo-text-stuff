@@ -44,43 +44,18 @@ end
 
 class Ice_recur_lib
 
-    def initialize()
-        @recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
-        @completed_file = File.join(ENV['TODO_DIR'], '.ice_recur_completed')
+    def initialize(recur_file_content)
+        @recur_file_content = recur_file_content
+        #@recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
+        #@completed_file = File.join(ENV['TODO_DIR'], '.ice_recur_completed')
     end
 
-    def show_next
-      recur_entries = File.read(@recur_file).split("\n").reject { |e| e =~ %r{^#} }
+    def show_next(from = nil)
+      recur_entries = @recur_file_content.split("\n").reject { |e| e =~ %r{^#} }
 
       recur_entries.each do |recur|
         schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
-        puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence.strftime("%Y-%m-%d")} -- Text: #{taskstr}"
-      end
-    end
-
-    def check
-      email = opts[:check]
-
-      send_mail = false
-      e = nil
-      begin
-        if Time.now.to_i - File.mtime(@completed_file).to_i > 172800
-          send_mail = true
-        end
-      rescue => e
-        send_mail = true
-      end
-
-      if e
-        puts e
-        puts e.backtrace
-      end
-
-      if send_mail
-        print "Sending email.\n"
-        print %x{echo "File #{@completed_file} is more than two days old, or something else weird happened.\n" | mailx -s 'ERROR: ice_recur has not run in 2 days!' #{email}}
-      else
-        print "File #{@completed_file} has been touched recently; looks good.\n"
+        puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence( from ).strftime("%Y-%m-%d")} -- Text: #{taskstr}"
       end
     end
 
