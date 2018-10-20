@@ -2,10 +2,21 @@ require_relative '../ice_recur_lib'
 
 RSpec.describe "parse_recur_file_content" do
   it "each line is parsed into schedule and action entry" do
-    recur_entries = parse_recur_file_content("@2018-01-01 weekly - Call mom")
-    expect(recur_entries.length).to eq(1)
+    recur_entries = parse_recur_file_content("@2018-01-01 weekly - Call mom\n@2018-01-02 weekly - Call dad")
+    expect(recur_entries.length).to eq(2)
     expect(recur_entries[0][0]).to eq("@2018-01-01 weekly")
     expect(recur_entries[0][1]).to eq("Call mom")
+    expect(recur_entries[1][0]).to eq("@2018-01-02 weekly")
+    expect(recur_entries[1][1]).to eq("Call dad")
+  end
+
+  it "lines starting with '#' are ignored" do
+    recur_entries = parse_recur_file_content("#@2018-01-01 weekly - Call mom")
+    expect(recur_entries.length).to eq(0)
+  end
+
+  it "invalid lines lead to an exception" do
+    expect{ parse_recur_file_content("? - Call mom") }.to raise_error(RuntimeError)
   end
 end
 

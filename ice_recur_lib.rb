@@ -2,10 +2,9 @@ require 'ice_cube'
 require 'todotxt'   # https://github.com/tylerdooling/todotxt-rb ; gem install todotxt-rb
 
 def parse_recur_file_content(recur_file_content)
-  recur_lines = recur_file_content.split("\n").reject { |e| e =~ %r{^#} }
-  bad_lines = recur_lines.reject { |e| e =~ %r{^(@[0-9-]+ )?[A-Za-z;,_0-9\s]+ - } }
-  if bad_lines.length > 0
-    raise "Bad lines found: \n#{bad_lines.join("\n")}"
+  recur_lines = recur_file_content.split("\n").reject { |e| e =~ /^#/ }
+  if not recur_lines.all?{ |e| e =~ /^(@[0-9-]+ )?[A-Za-z;,_0-9\s]+ - / }
+    raise "Bad line(s) found"
   end
 
   recur_entries = []
