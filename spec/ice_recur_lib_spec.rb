@@ -1,5 +1,14 @@
 require_relative '../ice_recur_lib'
 
+RSpec.describe "parse_recur_file_content" do
+  it "each line is parsed into schedule and action entry" do
+    recur_entries = parse_recur_file_content("@2018-01-01 weekly - Call mom")
+    expect(recur_entries.length).to eq(1)
+    expect(recur_entries[0][0]).to eq("@2018-01-01 weekly")
+    expect(recur_entries[0][1]).to eq("Call mom")
+  end
+end
+
 RSpec.describe "make_schedule" do
   it "includes today for 'daily'" do
       schedule = make_schedule( "daily" )

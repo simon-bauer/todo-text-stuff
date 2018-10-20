@@ -1,6 +1,21 @@
 require 'ice_cube'
 require 'todotxt'   # https://github.com/tylerdooling/todotxt-rb ; gem install todotxt-rb
 
+def parse_recur_file_content(recur_file_content)
+  recur_lines = recur_file_content.split("\n").reject { |e| e =~ %r{^#} }
+  bad_lines = recur_lines.reject { |e| e =~ %r{^(@[0-9-]+ )?[A-Za-z;,_0-9\s]+ - } }
+  if bad_lines.length > 0
+    raise "Bad lines found: \n#{bad_lines.join("\n")}"
+  end
+
+  recur_entries = []
+  recur_lines.each do |recur|
+    schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
+    recur_entries << [schedstr, taskstr]
+  end
+  recur_entries
+end
+
 
 def make_schedule( rulestr )
   # Get the start date, if any
@@ -45,18 +60,16 @@ end
 class Ice_recur_lib
 
     def initialize(recur_file_content)
-        @recur_file_content = recur_file_content
+        @recur_entries = parse_recur_file_content(recur_file_content)
         #@recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
         #@completed_file = File.join(ENV['TODO_DIR'], '.ice_recur_completed')
     end
 
     def show_next(from = nil)
-      recur_entries = @recur_file_content.split("\n").reject { |e| e =~ %r{^#} }
-
-      recur_entries.each do |recur|
-        schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
-        puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence( from ).strftime("%Y-%m-%d")} -- Text: #{taskstr}"
+      @recur_entries.each do |recur|
+        puts "Schedule: #{recur[0]} -- Next Day: #{make_schedule( recur[0] ).next_occurrence( from ).strftime("%Y-%m-%d")} -- Text: #{recur[1]}"
       end
+
     end
 
     def default
