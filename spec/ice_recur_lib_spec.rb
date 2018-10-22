@@ -96,10 +96,37 @@ end
 
 RSpec.describe "Ice_recur_lib" do
   it "show_next shows next occurence of each entry/line in the recur file" do
-    expect(STDOUT).to receive(:puts).with("Schedule: @2018-01-01 weekly -- Next Day: 2018-01-08 -- Text: Call mom")
+    expect($stdout).to receive(:puts).with("Schedule: @2018-01-01 weekly -- Next Day: 2018-01-08 -- Text: Call mom")
 
     recur_file_content = "@2018-01-01 weekly - Call mom\n"
     lib = Ice_recur_lib.new recur_file_content
     lib.show_next(Date.new(2018,01,02))
   end
+
+
+  it "add actions" do
+    recur_file_content = "@2018-01-01 daily - Call mom\n"
+    lib = Ice_recur_lib.new recur_file_content
+    todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call dad")])
+
+    allow($stdout).to receive(:puts)
+    lib.add_actions(todo_list)
+
+    expect( todo_list.length ).to eq(2)
+    expect( todo_list[0].text ).to eq("Call dad")
+    expect( todo_list[1].text ).to eq("Call mom")
+  end
+
+  it "add_actions only if not already in todo list" do
+    recur_file_content = "@2018-01-01 daily - Call mom\n"
+    lib = Ice_recur_lib.new recur_file_content
+    todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call mom")])
+
+    allow($stdout).to receive(:puts)
+    lib.add_actions(todo_list)
+
+    expect( todo_list.length ).to eq(1)
+    expect( todo_list[0].text ).to eq("Call mom")
+  end
+
 end
