@@ -91,6 +91,16 @@ RSpec.describe "make_schedule" do
       expect( schedule.occurs_on?(Date.new(2018,01,17)) ).to be false
   end
 
+  it "occurs_between" do
+      schedule = make_schedule( "@2000-01-01 daily 3" )
+
+      expect( schedule.occurs_between?(Date.new(2000,1,1), Date.new(2000,1,1)) ).to be true
+      expect( schedule.occurs_between?(Date.new(2000,1,1), Date.new(2000,1,2)) ).to be true
+      expect( schedule.occurs_between?(Date.new(2000,1,2), Date.new(2000,1,3)) ).to be false
+      expect( schedule.occurs_between?(Date.new(2000,1,3), Date.new(2000,1,4)) ).to be true
+
+      expect( schedule.occurs_between?(Date.new(2000,1,3), Date.new(2000,1,5)) ).to be true
+  end
 
 end
 
@@ -100,21 +110,35 @@ RSpec.describe "Ice_recur_lib" do
 
     recur_file_content = "@2018-01-01 weekly - Call mom\n"
     lib = Ice_recur_lib.new recur_file_content
-    lib.show_next(Date.new(2018,01,02))
+    lib.show_next(fake_today: Date.new(2018,01,02))
   end
 
 
-  it "add actions" do
+  it "add actions if today is an occurence" do
     recur_file_content = "@2018-01-01 daily - Call mom\n"
     lib = Ice_recur_lib.new recur_file_content
     todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call dad")])
 
     allow($stdout).to receive(:puts)
-    lib.add_actions(todo_list)
+    lib.add_actions(todo_list: todo_list)
 
     expect( todo_list.length ).to eq(2)
     expect( todo_list[0].text ).to eq("Call dad")
     expect( todo_list[1].text ).to eq("Call mom")
+  end
+
+  it "does not add actions if today is no occurence" do
+    recur_file_content = "@2018-01-01 daily 2 - Call mom\n"
+    lib = Ice_recur_lib.new recur_file_content
+    todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call dad")])
+
+    fake_today = Date.new(2018,1,2)
+
+    allow($stdout).to receive(:puts)
+    lib.add_actions(todo_list: todo_list, fake_today: fake_today)
+
+    expect( todo_list.length ).to eq(1)
+    expect( todo_list[0].text ).to eq("Call dad")
   end
 
   it "add_actions only if not already in todo list" do
@@ -123,10 +147,28 @@ RSpec.describe "Ice_recur_lib" do
     todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call mom")])
 
     allow($stdout).to receive(:puts)
-    lib.add_actions(todo_list)
+    lib.add_actions(todo_list: todo_list)
 
     expect( todo_list.length ).to eq(1)
     expect( todo_list[0].text ).to eq("Call mom")
+  end
+
+  it "add_actions considering the date of the last adding" do
+    recur_file_content = "@2018-01-01 daily 2 - Call mom\n"
+    lib = Ice_recur_lib.new recur_file_content
+    todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call dad")])
+
+    fake_today = Date.new(2018,1,4)
+    date_task_was_last_added = {"Call mom" => Date.new(2018,1,1)}
+
+    allow($stdout).to receive(:puts)
+    lib.add_actions(todo_list: todo_list, fake_today: fake_today, date_task_was_last_added: date_task_was_last_added)
+
+    expect( todo_list.length ).to eq(2)
+    expect( todo_list[0].text ).to eq("Call dad")
+    expect( todo_list[1].text ).to eq("Call mom")
+
+    expect( date_task_was_last_added["Call mom"] ).to eq(fake_today)
   end
 
 end

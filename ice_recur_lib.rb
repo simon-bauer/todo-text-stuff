@@ -62,19 +62,28 @@ class Ice_recur_lib
         @recur_entries = parse_recur_file_content(recur_file_content)
     end
 
-    def show_next(from = nil)
+    def show_next(fake_today: nil)
       @recur_entries.each do |recur|
-        puts "Schedule: #{recur[0]} -- Next Day: #{make_schedule( recur[0] ).next_occurrence( from ).strftime("%Y-%m-%d")} -- Text: #{recur[1]}"
+        puts "Schedule: #{recur[0]} -- Next Day: #{make_schedule( recur[0] ).next_occurrence( fake_today ).strftime("%Y-%m-%d")} -- Text: #{recur[1]}"
       end
 
     end
 
-    def add_actions(todo_list) # TodoTxt::List
+    def add_actions(todo_list: todo, fake_today: Date.today, date_task_was_last_added: {}) # TodoTxt::List
       @recur_entries.each do |recur|
-        if make_schedule( recur[0] ).occurs_on?(Date.today)
-          puts "- Recur matches today: #{recur[0]} --- #{recur[1]}"
-          task = TodoTxt::Task.parse(recur[1])
-          task[:created_at] = DateTime.now
+        schedule = make_schedule(recur[0])
+        task = TodoTxt::Task.parse(recur[1])
+        task[:created_at] = DateTime.now
+
+        last_add = date_task_was_last_added[task.text]
+        if last_add == nil
+          last_add = Date.today - 1 # default is yesterday
+        end
+        
+        if schedule.occurs_between?(last_add+1, fake_today)
+          puts "- Recur matches: #{recur[0]} --- #{recur[1]}"
+          date_task_was_last_added[task.text] = fake_today
+
           found_task = todo_list.select { |t| t.text == task.text && ! t.completed? }.first
           if found_task
             puts "    - Duplicate task exists: #{found_task.text}"
@@ -86,7 +95,6 @@ class Ice_recur_lib
         end
       end
 
-      todo_list
     end
 
 end
