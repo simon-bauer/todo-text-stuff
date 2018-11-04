@@ -98,3 +98,23 @@ class Ice_recur_lib
     end
 
 end
+
+def ice_recur_main
+
+  f = File.open(File.join(ENV['TODO_DIR'], "ice_recur.txt"))
+  recur_file_content = f.read
+  f.close
+
+  f = File.open(File.join(ENV['TODO_DIR'], 'todo.txt'))
+  todo_list = TodoTxt::List.from_file(f)
+  f.close
+
+  lib = Ice_recur_lib.new recur_file_content
+  lib.add_actions(todo_list: todo_list)
+
+  f = File.open(File.join(ENV['TODO_DIR'], 'todo.txt'), 'w')
+  todo_list.to_file(f)
+  f.close
+
+  return 0
+end

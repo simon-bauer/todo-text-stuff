@@ -3,6 +3,7 @@
 require 'ice_cube'
 require 'todotxt'   # https://github.com/tylerdooling/todotxt-rb ; gem install todotxt-rb
 require 'trollop'
+require_relative 'ice_recur_lib'
 
 $VERSION='1.1'
 
@@ -72,167 +73,17 @@ opts = Trollop::options do
 
 EOS
 
-  opt :test, "Run tests on the recurrence code."
-  opt :check, "Check the completion file to see if ice_recur has actually run in the last two days.  Takes an email address to complain to if not as argument.", :type => String
   opt :show_next, "Instead of generating entries, show the next date that each entry *would* run."
 end
 
-def make_schedule( rulestr )
-  # Get the start date, if any
-  startdate = Time.now.to_date
-  if rulestr =~ %r{^\s*@}
-    startdate = Date.parse(rulestr.sub(%r{^\s*@(\S+)\s.*},'\1'))
-    rulestr = rulestr.dup.sub!(%r{^\s*@\S+},'')
-  end
 
-  rule=IceCube::Rule
-  schedule = IceCube::Schedule.new(startdate.to_time)
+if opts[:show_next]
+  #recur_entries = File.read(recur_file).split("\n").reject { |e| e =~ %r{^#} }
 
-  rulestr.split(%r{\s;\s}).each do |rulebit|
-    method, argstr = rulebit.strip.split(%r{\s+}, 2)
-    method.downcase!
+  recur_file_content = "@2018-01-01 weekly - Call mom\n"
+  lib = Ice_recur_lib.new recur_file_content
+  lib.show_next
 
-    args = []
-
-    if argstr
-      args = argstr.strip.split(%r{\s*,\s*})
-
-      args.map! do |arg|
-        if arg =~ %r{day\s*$}
-          arg.downcase.to_sym
-        elsif arg =~ %r{[0-9]+}
-          arg = arg.to_i
-        else
-          arg
-        end
-      end
-    end
-
-    rule = rule.send(method, *args)
-  end
-
-  schedule.add_recurrence_rule rule
-
-  return schedule
-end
-
-$tapnum=1
-def tapprint( bool, text )
-  if bool
-    puts "ok #{$tapnum} - #{text}"
-  else
-    puts "not ok #{$tapnum} - #{text}"
-  end
-  $tapnum += 1
-end
-
-recur_file = File.join(ENV['TODO_DIR'], 'ice_recur.txt')
-completed_file = File.join(ENV['TODO_DIR'], '.ice_recur_completed')
-
-if opts[:test]
-  curmodays=Date.new(Time.now.year, Time.now.month, -1).day
-
-  puts "1..6"
-
-  tstring="daily"
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today), "#{tstring} includes today" )
-
-
-  tstring="daily 2"
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today) &&
-      ! schedule.occurs_on?(Date.today + 1) &&
-      schedule.occurs_on?(Date.today + 2),
-        "#{tstring} includes today, and 2 days from now, but not tomorrow" )
-
-  tstring="@#{(DateTime.now - 1).strftime("%Y-%m-%d")} daily 2"
-  schedule = make_schedule( tstring )
-  tapprint( 
-      schedule.occurs_on?(Date.today - 1) &&
-      ! schedule.occurs_on?(Date.today) &&
-      schedule.occurs_on?(Date.today + 1) &&
-      ! schedule.occurs_on?(Date.today + 2) &&
-      schedule.occurs_on?(Date.today + 3) &&
-      ! schedule.occurs_on?(Date.today + 4),
-        "#{tstring} includes some days and not others, and today is not one of them" )
-
-  tstring="weekly ; day #{%x{date +%w}.to_i}, #{%x{date +%w -d "now + 2 days"}.to_i}"
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today) &&
-      ! schedule.occurs_on?(Date.today + 1) &&
-      schedule.occurs_on?(Date.today + 2) &&
-      ! schedule.occurs_on?(Date.today + 4) &&
-      ! schedule.occurs_on?(Date.today + 5),
-        "#{tstring} includes some days and not others" )
-
-  tstring="weekly ; day #{%x{date +%w}.to_i}, #{%x{date +%w -d "now + 1 days"}.to_i}"
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today) &&
-      schedule.occurs_on?(Date.today + 1) &&
-      ! schedule.occurs_on?(Date.today + 2) &&
-      ! schedule.occurs_on?(Date.today + 4) &&
-      ! schedule.occurs_on?(Date.today + 5),
-        "#{tstring} includes a different set of days" )
-
-  tstring=%Q{weekly ; day #{%x{date +%A}.chomp}, #{%x{date +%A -d "now + 2 days"}.chomp}}
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today) &&
-      ! schedule.occurs_on?(Date.today + 1) &&
-      schedule.occurs_on?(Date.today + 2) &&
-      ! schedule.occurs_on?(Date.today + 4) &&
-      ! schedule.occurs_on?(Date.today + 5),
-        "#{tstring} includes some days and not others" )
-
-  tstring=%Q{weekly ; day #{%x{date +%A}.chomp}, #{%x{date +%A -d "now + 1 days"}.chomp}}
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today) &&
-      schedule.occurs_on?(Date.today + 1) &&
-      ! schedule.occurs_on?(Date.today + 2) &&
-      ! schedule.occurs_on?(Date.today + 4) &&
-      ! schedule.occurs_on?(Date.today + 5),
-        "#{tstring} includes a different set of days" )
-
-  tstring="monthly ; day_of_month #{%x{date +%d}.chomp}, #{%x{date +%d -d "now + 2 days"}.chomp}"
-  schedule = make_schedule( tstring )
-  tapprint( schedule.occurs_on?(Date.today) &&
-      ! schedule.occurs_on?(Date.today + 1) &&
-      schedule.occurs_on?(Date.today + 2) &&
-      ! schedule.occurs_on?(Date.today + 4) &&
-      ! schedule.occurs_on?(Date.today + 5),
-        "#{tstring} includes a different set of days" )
-
-elsif opts[:show_next]
-  recur_entries = File.read(recur_file).split("\n").reject { |e| e =~ %r{^#} }
-
-  recur_entries.each do |recur|
-    schedstr, taskstr = recur.strip.split(%r{\s+-\s+}, 2)
-    puts "Schedule: #{schedstr} -- Next Day: #{make_schedule( schedstr ).next_occurrence.strftime("%Y-%m-%d")} -- Text: #{taskstr}"
-  end
-elsif opts[:check]
-  email = opts[:check]
-
-  send_mail = false
-  e = nil
-  begin
-    if Time.now.to_i - File.mtime(completed_file).to_i > 172800
-      send_mail = true
-    end
-  rescue => e
-    send_mail = true
-  end
-
-  if e
-    puts e
-    puts e.backtrace
-  end
-
-  if send_mail
-    print "Sending email.\n"
-    print %x{echo "File #{completed_file} is more than two days old, or something else weird happened.\n" | mailx -s 'ERROR: ice_recur has not run in 2 days!' #{email}}
-  else
-    print "File #{completed_file} has been touched recently; looks good.\n"
-  end
 else
   # Get our recur entries
   # Drop everything that looks like a comment or blank
