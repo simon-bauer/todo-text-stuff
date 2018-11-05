@@ -1,5 +1,6 @@
 require 'ice_cube'
 require 'todotxt'   # https://github.com/tylerdooling/todotxt-rb ; gem install todotxt-rb
+require 'json'
 
 def parse_recur_file_content(recur_file_content)
   recur_lines = recur_file_content.split("\n").reject { |e| e =~ /^#/ }
@@ -109,11 +110,19 @@ def ice_recur_main
   todo_list = TodoTxt::List.from_file(f)
   f.close
 
+  f = File.open(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt"))
+  date_task_was_last_added = JSON.parse(f.read)
+  f.close
+
   lib = Ice_recur_lib.new recur_file_content
-  lib.add_actions(todo_list: todo_list)
+  lib.add_actions(todo_list: todo_list, date_task_was_last_added: date_task_was_last_added)
 
   f = File.open(File.join(ENV['TODO_DIR'], 'todo.txt'), 'w')
   todo_list.to_file(f)
+  f.close
+
+  f = File.open(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt"), 'w')
+  f << date_task_was_last_added.to_json
   f.close
 
   return 0

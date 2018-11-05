@@ -196,13 +196,14 @@ RSpec.describe "ice_recur_main" do
     allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], "ice_recur.txt")).and_return(ice_recur_input)
 
     date_task_was_last_added_input = StringIO.new("{\"Call dad\":\"2018-01-01\"}")
-    #expect(date_task_was_last_added_input).to receive(:close)
+    expect(date_task_was_last_added_input).to receive(:close)
     allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt")).and_return(date_task_was_last_added_input)
 
     date_task_was_last_added_output = StringIO.new
-    #expect(date_task_was_last_added_output).to receive(:close)
+    expect(date_task_was_last_added_output).to receive(:close)
     allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt"),'w').and_return(date_task_was_last_added_output)
 
+    allow($stdout).to receive(:puts)
 
     # when
     return_value = ice_recur_main
@@ -212,6 +213,9 @@ RSpec.describe "ice_recur_main" do
 
     todotxt_output.rewind
     expect( todotxt_output.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
+
+    date_task_was_last_added_output.rewind
+    expect( date_task_was_last_added_output.read).to eq("{\"Call dad\":\"2018-01-01\",\"Call mom\":\"#{Date.today.to_s}\"}")
   end
 end
 
