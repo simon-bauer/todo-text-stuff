@@ -110,9 +110,14 @@ def ice_recur_main
         TodoTxt::List.from_file(f)
       end
 
-      date_task_was_last_added = File.open("ice_recur_date_task_was_last_added.txt") do |f|
-        JSON.parse(f.read)
-      end
+      date_task_was_last_added = 
+        if File.file?("ice_recur_date_task_was_last_added.txt")
+          File.open("ice_recur_date_task_was_last_added.txt") do |f|
+            JSON.parse(f.read)
+          end
+        else
+          {}
+        end
 
       lib = Ice_recur_lib.new recur_file_content
       lib.add_actions(todo_list: todo_list, date_task_was_last_added: date_task_was_last_added)

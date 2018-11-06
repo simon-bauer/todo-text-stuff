@@ -206,5 +206,32 @@ RSpec.describe "ice_recur_main" do
       end
     end
   end
+
+  it "happy path with missing ice_recur_date_task_was_last_added file" do
+    Dir.mktmpdir do |dir|
+      ENV['TODO_DIR'] = dir
+      Dir.chdir(dir) do
+        File.open("ice_recur.txt","w") do |f|
+          f << "@2018-01-01 daily 1 - Call mom\n"
+        end
+        File.open("todo.txt","w") do |f|
+          f << "Call dad\n"
+        end
+      end
+
+      allow($stdout).to receive(:puts)
+      return_value = ice_recur_main
+
+      expect( return_value ).to eq(0)
+      Dir.chdir(dir) do
+        File.open("todo.txt","r") do |f|
+          expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
+        end
+        File.open("ice_recur_date_task_was_last_added.txt","r") do |f|
+          expect( f.read).to eq("{\"Call mom\":\"#{Date.today.to_s}\"}")
+        end
+      end
+    end
+  end
 end
 
