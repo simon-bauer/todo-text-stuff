@@ -101,29 +101,30 @@ class Ice_recur_lib
 end
 
 def ice_recur_main
+  Dir.chdir(ENV['TODO_DIR']) do
+      recur_file_content = File.open("ice_recur.txt") do |f|
+        f.read
+      end
 
-  f = File.open(File.join(ENV['TODO_DIR'], "ice_recur.txt"))
-  recur_file_content = f.read
-  f.close
+      todo_list = File.open("todo.txt") do |f|
+        TodoTxt::List.from_file(f)
+      end
 
-  f = File.open(File.join(ENV['TODO_DIR'], 'todo.txt'))
-  todo_list = TodoTxt::List.from_file(f)
-  f.close
+      date_task_was_last_added = File.open("ice_recur_date_task_was_last_added.txt") do |f|
+        JSON.parse(f.read)
+      end
 
-  f = File.open(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt"))
-  date_task_was_last_added = JSON.parse(f.read)
-  f.close
+      lib = Ice_recur_lib.new recur_file_content
+      lib.add_actions(todo_list: todo_list, date_task_was_last_added: date_task_was_last_added)
 
-  lib = Ice_recur_lib.new recur_file_content
-  lib.add_actions(todo_list: todo_list, date_task_was_last_added: date_task_was_last_added)
+      File.open('todo.txt', 'w') do |f|
+        todo_list.to_file(f)
+      end
 
-  f = File.open(File.join(ENV['TODO_DIR'], 'todo.txt'), 'w')
-  todo_list.to_file(f)
-  f.close
+      File.open("ice_recur_date_task_was_last_added.txt", 'w') do |f|
+        f << date_task_was_last_added.to_json
+      end
 
-  f = File.open(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt"), 'w')
-  f << date_task_was_last_added.to_json
-  f.close
-
-  return 0
+      return 0
+  end
 end

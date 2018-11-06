@@ -176,46 +176,35 @@ RSpec.describe "Ice_recur_lib" do
 end
 
 RSpec.describe "ice_recur_main" do
+
   it "happy path" do
-    # in:  ENV, todotxt-file, recur-file, date-last-added-file
-    ENV['TODO_DIR'] = Dir.tmpdir
+    Dir.mktmpdir do |dir|
+      ENV['TODO_DIR'] = dir
+      Dir.chdir(dir) do
+        File.open("ice_recur.txt","w") do |f|
+          f << "@2018-01-01 daily 1 - Call mom\n"
+        end
+        File.open("todo.txt","w") do |f|
+          f << "Call dad\n"
+        end
+        File.open("ice_recur_date_task_was_last_added.txt","w") do |f|
+          f << "{\"Call dad\":\"2018-01-01\"}"
+        end
+      end
 
+      allow($stdout).to receive(:puts)
+      return_value = ice_recur_main
 
-    allow(File).to receive(:open).and_call_original
-
-    todotxt_input = StringIO.new("Call dad\n")
-    expect(todotxt_input).to receive(:close)
-    allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], 'todo.txt')).and_return(todotxt_input)
-
-    todotxt_output = StringIO.new
-    expect(todotxt_output).to receive(:close)
-    allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], 'todo.txt'),'w').and_return(todotxt_output)
-
-    ice_recur_input = StringIO.new("@2018-01-01 daily 1 - Call mom\n")
-    expect(ice_recur_input).to receive(:close)
-    allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], "ice_recur.txt")).and_return(ice_recur_input)
-
-    date_task_was_last_added_input = StringIO.new("{\"Call dad\":\"2018-01-01\"}")
-    expect(date_task_was_last_added_input).to receive(:close)
-    allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt")).and_return(date_task_was_last_added_input)
-
-    date_task_was_last_added_output = StringIO.new
-    expect(date_task_was_last_added_output).to receive(:close)
-    allow(File).to receive(:open).with(File.join(ENV['TODO_DIR'], "ice_recur_date_task_was_last_added.txt"),'w').and_return(date_task_was_last_added_output)
-
-    allow($stdout).to receive(:puts)
-
-    # when
-    return_value = ice_recur_main
-    
-    # out: shell-return-code, todotxt-file, date-last-added-file
-    expect( return_value ).to eq(0)
-
-    todotxt_output.rewind
-    expect( todotxt_output.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
-
-    date_task_was_last_added_output.rewind
-    expect( date_task_was_last_added_output.read).to eq("{\"Call dad\":\"2018-01-01\",\"Call mom\":\"#{Date.today.to_s}\"}")
+      expect( return_value ).to eq(0)
+      Dir.chdir(dir) do
+        File.open("todo.txt","r") do |f|
+          expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
+        end
+        File.open("ice_recur_date_task_was_last_added.txt","r") do |f|
+          expect( f.read).to eq("{\"Call dad\":\"2018-01-01\",\"Call mom\":\"#{Date.today.to_s}\"}")
+        end
+      end
+    end
   end
 end
 
