@@ -1,6 +1,7 @@
 require_relative '../ice_recur_lib'
 require 'tmpdir'
 require 'pry'
+require 'pry-byebug'
 
 RSpec.describe "parse_recur_file_content" do
   it "each line is parsed into schedule and action entry" do
@@ -135,9 +136,10 @@ RSpec.describe "Ice_recur_lib" do
     todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call dad")])
 
     fake_today = Date.new(2018,1,2)
+    date_task_was_last_added = {"Call mom" => Date.new(2018,1,1)}
 
     allow($stdout).to receive(:puts)
-    lib.add_actions(todo_list: todo_list, fake_today: fake_today)
+    lib.add_actions(todo_list: todo_list, fake_today: fake_today, date_task_was_last_added: date_task_was_last_added)
 
     expect( todo_list.length ).to eq(1)
     expect( todo_list[0].text ).to eq("Call dad")
@@ -173,6 +175,24 @@ RSpec.describe "Ice_recur_lib" do
     expect( date_task_was_last_added["Call mom"] ).to eq(fake_today)
   end
 
+  it "add_actions considering the date of the last adding also when it was never added before" do
+    recur_file_content = "@2018-01-01 daily 2 - Call mom\n"
+    lib = Ice_recur_lib.new recur_file_content
+    todo_list = TodoTxt::List.new([TodoTxt::Task.parse("Call dad")])
+
+    fake_today = Date.new(2018,1,4)
+    date_task_was_last_added = {}
+
+    allow($stdout).to receive(:puts)
+    lib.add_actions(todo_list: todo_list, fake_today: fake_today, date_task_was_last_added: date_task_was_last_added)
+
+    expect( todo_list.length ).to eq(2)
+    expect( todo_list[0].text ).to eq("Call dad")
+    expect( todo_list[1].text ).to eq("Call mom")
+
+    expect( date_task_was_last_added["Call mom"] ).to eq(fake_today)
+  end
+
 end
 
 RSpec.describe "ice_recur_main" do
@@ -188,7 +208,7 @@ RSpec.describe "ice_recur_main" do
           f << "Call dad\n"
         end
         File.open("ice_recur_date_task_was_last_added.txt","w") do |f|
-          f << "{\"Call dad\":\"2018-01-01\"}"
+          f << "{\"Call mom\":\"2018-01-01\"}"
         end
       end
 
@@ -201,7 +221,7 @@ RSpec.describe "ice_recur_main" do
           expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
         end
         File.open("ice_recur_date_task_was_last_added.txt","r") do |f|
-          expect( f.read).to eq("{\"Call dad\":\"2018-01-01\",\"Call mom\":\"#{Date.today.to_s}\"}")
+          expect( f.read).to eq("{\"Call mom\":\"#{Date.today.to_s}\"}")
         end
       end
     end

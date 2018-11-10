@@ -79,7 +79,7 @@ class Ice_recur_lib
 
         last_add = date_task_was_last_added[task.text]
         if last_add == nil
-          last_add = Date.today - 1 # default is yesterday
+          last_add = Date.new(2000,1,1) # default is long time ago
         end
         
         if schedule.occurs_between?(last_add+1, fake_today)
@@ -125,7 +125,7 @@ def ice_recur_main
         if File.file?("ice_recur_date_task_was_last_added.txt")
           File.open("ice_recur_date_task_was_last_added.txt") do |f|
             JSON.parse(f.read)
-          end
+          end.transform_values{|v| Date.parse v}
         else
           {}
         end
