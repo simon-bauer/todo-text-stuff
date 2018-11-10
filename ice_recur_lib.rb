@@ -28,8 +28,10 @@ def make_schedule( rulestr )
 
   rule=IceCube::Rule
   schedule = IceCube::Schedule.new(startdate.to_time)
+  more_than_startdate = false
 
   rulestr.split(%r{\s;\s}).each do |rulebit|
+    more_than_startdate = true
     method, argstr = rulebit.strip.split(%r{\s+}, 2)
     method.downcase!
 
@@ -52,7 +54,9 @@ def make_schedule( rulestr )
     rule = rule.send(method, *args)
   end
 
-  schedule.add_recurrence_rule rule
+  if more_than_startdate
+    schedule.add_recurrence_rule rule
+  end
 
   return schedule
 end

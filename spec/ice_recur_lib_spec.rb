@@ -1,7 +1,7 @@
 require_relative '../ice_recur_lib'
 require 'tmpdir'
-require 'pry'
-require 'pry-byebug'
+#require 'pry'
+#require 'pry-byebug'
 
 RSpec.describe "parse_recur_file_content" do
   it "each line is parsed into schedule and action entry" do
@@ -34,6 +34,12 @@ RSpec.describe "make_schedule" do
       expect( schedule.occurs_on?(Date.today) ).to be true
       expect( schedule.occurs_on?(Date.today + 1) ).to be false
       expect( schedule.occurs_on?(Date.today + 2) ).to be true
+  end
+
+  it "includes startdate" do
+      schedule = make_schedule( "@2000-01-01" )
+      expect( schedule.occurs_on?(Date.new(2000, 1, 1)) ).to be true
+      expect( schedule.occurs_on?(Date.new(2000, 1, 2)) ).to be false
   end
 
   it "includes startdate and every second date following for 'daily 2' with startdate" do
