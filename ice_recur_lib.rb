@@ -5,7 +5,8 @@ require 'optparse'
 
 def parse_recur_file_content(recur_file_content)
   recur_lines = recur_file_content.split("\n").reject { |e| e =~ /^#/ }
-  if not recur_lines.all?{ |e| e =~ /^(@[0-9-]+ )?[A-Za-z;,_0-9\s]+ - / }
+  #if not recur_lines.all?{ |e| e =~ /^(@[0-9-]+ )?[A-Za-z;,_0-9\s]*s - / }
+  if not recur_lines.all?{ |e| e =~ /^\s*(@\d{4}-\d{1,2}-\d{1,2})?\s*([A-Za-z;,_0-9\s]*)\s-\s(.*)/ }
     raise "Bad line(s) found"
   end
 
@@ -70,7 +71,10 @@ class Ice_recur_lib
 
     def show_next(fake_today: nil)
       @recur_entries.each do |recur|
-        puts "Schedule: #{recur[0]} -- Next Day: #{make_schedule( recur[0] ).next_occurrence( fake_today ).strftime("%Y-%m-%d")} -- Text: #{recur[1]}"
+        next_occurence_date = make_schedule( recur[0] ).next_occurrence( fake_today )
+        if next_occurence_date
+          puts "Schedule: #{recur[0]} -- Next Day: #{next_occurence_date.strftime("%Y-%m-%d")} -- Text: #{recur[1]}"
+        end
       end
 
     end

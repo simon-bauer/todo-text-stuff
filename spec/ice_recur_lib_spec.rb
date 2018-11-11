@@ -5,11 +5,11 @@ require 'tmpdir'
 
 RSpec.describe "parse_recur_file_content" do
   it "each line is parsed into schedule and action entry" do
-    recur_entries = parse_recur_file_content("@2018-01-01 weekly - Call mom\n@2018-01-02 weekly - Call dad")
+    recur_entries = parse_recur_file_content("@2018-01-01 weekly - Call mom\n@2018-01-02 - Call dad")
     expect(recur_entries.length).to eq(2)
     expect(recur_entries[0][0]).to eq("@2018-01-01 weekly")
     expect(recur_entries[0][1]).to eq("Call mom")
-    expect(recur_entries[1][0]).to eq("@2018-01-02 weekly")
+    expect(recur_entries[1][0]).to eq("@2018-01-02")
     expect(recur_entries[1][1]).to eq("Call dad")
   end
 
