@@ -224,7 +224,7 @@ RSpec.describe "ice_recur_main" do
       expect( return_value ).to eq(0)
       Dir.chdir(dir) do
         File.open("todo.txt","r") do |f|
-          expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
+          expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom\n")
         end
         File.open("ice_recur_date_task_was_last_added.txt","r") do |f|
           expect( f.read).to eq("{\"Call mom\":\"#{Date.today.to_s}\"}")
@@ -251,7 +251,7 @@ RSpec.describe "ice_recur_main" do
       expect( return_value ).to eq(0)
       Dir.chdir(dir) do
         File.open("todo.txt","r") do |f|
-          expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom")
+          expect( f.read ).to eq("Call dad\n#{Date.today.to_s} Call mom\n")
         end
         File.open("ice_recur_date_task_was_last_added.txt","r") do |f|
           expect( f.read).to eq("{\"Call mom\":\"#{Date.today.to_s}\"}")

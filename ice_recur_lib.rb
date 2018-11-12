@@ -142,6 +142,7 @@ def ice_recur_main
 
       File.open('todo.txt', 'w') do |f|
         todo_list.to_file(f)
+        f << "\n"
       end
 
       File.open("ice_recur_date_task_was_last_added.txt", 'w') do |f|
